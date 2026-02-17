@@ -9,23 +9,63 @@ on:
 
 jobs:  
   build:  
-    runs-on: macOS-latest  
+    runs-on: macos-latest  
     steps:  
       - name: Checkout code  
-        uses: actions/checkout@v3  
+        uses: actions/checkout@v4  
+      
       - name: Set up Python  
-        uses: actions/setup-python@v3  
+        uses: actions/setup-python@v4  
         with:  
-          python-version: '3.8'  
+          python-version: '3.12'  
+      
       - name: Install dependencies  
         run: |  
           python -m pip install --upgrade pip  
           pip install pyinstaller  
+      
       - name: Create macOS binary  
         run: |  
-          pyinstaller --onefile install_cert.py  
-      - name: Archive the binary  
-        uses: actions/upload-artifact@v3  
+          pyinstaller --onefile --name install_cert install_cert.py  
+      
+      - name: Verify binary was created
+        run: |
+          if [ -f dist/install_cert ]; then
+            echo "Binary created successfully"
+            file dist/install_cert
+            ls -lh dist/install_cert
+          else
+            echo "ERROR: Binary not found at dist/install_cert"
+            ls -la dist/
+            exit 1
+          fi
+      
+      - name: Create release tarball  
+        run: |  
+          cd dist
+          tar -czf install_cert-macos.tar.gz install_cert
+          ls -lh install_cert-macos.tar.gz
+      
+      - name: Upload binary artifact  
+        uses: actions/upload-artifact@v4  
         with:  
-          name: macos-binary  
+          name: macos-binary-executable  
           path: dist/install_cert  
+          if-no-files-found: error
+      
+      - name: Upload tarball artifact  
+        uses: actions/upload-artifact@v4  
+        with:  
+          name: macos-binary-tarball  
+          path: dist/install_cert-macos.tar.gz  
+          if-no-files-found: error
+      
+      - name: Create GitHub Release (if tagged)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/install_cert
+            dist/install_cert-macos.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
