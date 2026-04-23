@@ -29,7 +29,6 @@ jobs:
           pyinstaller --onefile \
             --target-arch universal2 \
             --name install_cert \
-            --windowed \
             install_cert.py
       
       - name: Verify Binary Architecture
