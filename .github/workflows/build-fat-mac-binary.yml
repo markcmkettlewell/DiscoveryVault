@@ -2,21 +2,15 @@ name: Build Universal macOS Binary
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*'          # Trigger on version tags (e.g. v1.0.0)
-    paths:
-      - 'install_cert.py'
-      - '.github/workflows/build-mac-binary.yml'
-  workflow_dispatch:   # Manual trigger
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: macos-latest
-
     permissions:
-      contents: write   # Required for creating releases
+      contents: write
 
     steps:
       - uses: actions/checkout@v6
@@ -29,20 +23,29 @@ jobs:
       - name: Install PyInstaller
         run: pip install pyinstaller
 
-      - name: Build Universal Binary
+      - name: Build for Apple Silicon (arm64)
         run: |
           pyinstaller --onefile \
-            --target-arch universal2 \
-            --name install_cert \
+            --target-arch arm64 \
+            --name install_cert-arm64 \
             install_cert.py
 
-      - name: Verify Binary Architecture
-        run: file dist/install_cert
+      - name: Build for Intel (x86_64)
+        run: |
+          pyinstaller --onefile \
+            --target-arch x86_64 \
+            --name install_cert-x86_64 \
+            install_cert.py
 
-      - name: Make Binary Executable
-        run: chmod +x dist/install_cert
+      - name: Combine into Universal Binary (lipo)
+        run: |
+          mkdir -p dist
+          lipo -create dist/install_cert-arm64 dist/install_cert-x86_64 \
+               -output dist/install_cert
+          file dist/install_cert
+          chmod +x dist/install_cert
 
-      - name: Sign Binary (ad-hoc)
+      - name: Ad-hoc Sign Binary
         run: codesign -s - dist/install_cert
 
       - name: Upload Artifact
@@ -52,7 +55,7 @@ jobs:
           path: dist/install_cert
           retention-days: 30
 
-      - name: Create GitHub Release (on tag)
+      - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v3
         with:
