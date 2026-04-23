@@ -42,7 +42,7 @@ jobs:
         run: codesign -s - dist/install_cert
       
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: install_cert-macos-universal
           path: dist/install_cert
