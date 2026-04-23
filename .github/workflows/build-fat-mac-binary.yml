@@ -25,28 +25,20 @@ jobs:
 
       - name: Build for Apple Silicon (arm64)
         run: |
-          pyinstaller --onefile \
-            --target-arch arm64 \
-            --name install_cert-arm64 \
-            install_cert.py
+          pyinstaller --onefile --target-arch arm64 \
+            --name install_cert-arm64 install_cert.py
 
       - name: Build for Intel (x86_64)
         run: |
-          pyinstaller --onefile \
-            --target-arch x86_64 \
-            --name install_cert-x86_64 \
-            install_cert.py
+          pyinstaller --onefile --target-arch x86_64 \
+            --name install_cert-x86_64 install_cert.py
 
-      - name: Combine into Universal Binary (lipo)
+      - name: Combine into Universal Binary
         run: |
-          mkdir -p dist
           lipo -create dist/install_cert-arm64 dist/install_cert-x86_64 \
                -output dist/install_cert
           file dist/install_cert
           chmod +x dist/install_cert
-
-      - name: Ad-hoc Sign Binary
-        run: codesign -s - dist/install_cert
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
